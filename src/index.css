@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+  }
+
+  /* Force dark mode for this app as per design */
+  :root {
+    --background: 0 0% 9%; /* neutral-900 like */
+    --foreground: 0 0% 98%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
