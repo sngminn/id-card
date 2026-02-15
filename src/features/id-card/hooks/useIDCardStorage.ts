@@ -4,16 +4,14 @@ import { db, type IDCard } from "@/db/db";
 export const useIDCardStorage = () => {
   const cards = useLiveQuery(() => db.idCards.orderBy("order").toArray());
 
-  const addCards = async (files: File[]) => {
+  const addCards = async (files: File[], type: IDCard["type"] = "custom") => {
     try {
-      // Get current max order to append
-      const lastCard = await db.idCards.orderBy("order").last();
-      let nextOrder = (lastCard?.order ?? 0) + 1;
+      const currentCount = await db.idCards.count();
 
-      const newCards: IDCard[] = files.map((file) => ({
-        type: "driver", // Default type
+      const newCards = files.map((file, index) => ({
+        type, // Use the passed type (driver | resident | custom)
         blob: file,
-        order: nextOrder++,
+        order: currentCount + index,
       }));
 
       await db.idCards.bulkAdd(newCards);
