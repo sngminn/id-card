@@ -1,11 +1,11 @@
 import { useRef, useState, useCallback } from "react";
 import Webcam from "react-webcam";
-import { Camera, RefreshCcw, AlertCircle } from "lucide-react";
+import { Camera, AlertCircle } from "lucide-react";
 import { usePhotoStore } from "@/store/usePhotoStore";
 
 const videoConstraints = {
-  width: 1280,
-  height: 720,
+  width: { min: 1280, ideal: 1920, max: 3840 },
+  height: { min: 720, ideal: 1080, max: 2160 },
   facingMode: "user",
 };
 
@@ -36,15 +36,16 @@ export const WebcamView = () => {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center w-full max-w-md mx-auto aspect-[3/4] bg-black rounded-lg overflow-hidden shadow-xl">
+    <div className="relative w-full h-full bg-black overflow-hidden rounded-xl">
       {loading && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white z-10">
-          <RefreshCcw className="w-8 h-8 animate-spin" />
+        <div className="absolute inset-0 z-10 w-full h-full bg-neutral-800 animate-pulse flex flex-col items-center justify-center">
+          <div className="w-16 h-16 bg-neutral-700 rounded-full mb-4"></div>
+          <div className="h-4 w-48 bg-neutral-700 rounded"></div>
         </div>
       )}
 
       {error ? (
-        <div className="flex flex-col items-center justify-center p-6 text-center text-red-400">
+        <div className="flex flex-col items-center justify-center w-full h-full p-6 text-center text-red-400">
           <AlertCircle className="w-12 h-12 mb-2" />
           <p>{error}</p>
         </div>
@@ -54,6 +55,9 @@ export const WebcamView = () => {
             audio={false}
             ref={webcamRef}
             screenshotFormat="image/jpeg"
+            screenshotQuality={1}
+            minScreenshotWidth={1280}
+            minScreenshotHeight={720}
             videoConstraints={videoConstraints}
             onUserMedia={handleUserMedia}
             onUserMediaError={handleUserMediaError}
@@ -61,15 +65,17 @@ export const WebcamView = () => {
             mirrored={true}
           />
 
-          {/* Guide Overlay (3:4 Aspect Ratio Visual Guide) */}
-          <div className="absolute inset-0 pointer-events-none border-2 border-white/30 rounded-lg">
-            <div className="absolute top-[10%] left-[15%] right-[15%] bottom-[20%] border-2 border-dashed border-white/50 rounded-full opacity-50"></div>
+          {/* Guide Overlay (3:4 Aspect Ratio Visual Guide) - Optional, mainly for centering */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="aspect-[3/4] h-[80%] border-2 border-dashed border-white/30 rounded-lg opacity-50 relative">
+              <div className="absolute top-[10%] left-[15%] right-[15%] bottom-[20%] border-2 border-dashed border-white/30 rounded-full"></div>
+            </div>
           </div>
 
-          <div className="absolute bottom-6 z-20">
+          <div className="absolute bottom-8 left-0 right-0 z-20 flex justify-center">
             <button
               onClick={capture}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-colors shadow-lg active:scale-95"
+              className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all shadow-xl hover:scale-105 active:scale-95"
               aria-label="사진 촬영"
             >
               <Camera className="w-6 h-6" />

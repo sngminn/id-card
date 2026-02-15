@@ -1,41 +1,89 @@
-import { useState } from "react";
-import Cropper from "react-easy-crop";
+import { useState, useRef } from "react";
+import ReactCrop, {
+  type Crop,
+  type PixelCrop,
+  centerCrop,
+  makeAspectCrop,
+} from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 import { getCroppedImg } from "@/lib/canvas";
 import { usePhotoStore } from "@/store/usePhotoStore";
 import { usePhotoStorage } from "@/features/id-photo/hooks/usePhotoStorage";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Area } from "react-easy-crop";
+import { saveAs } from "file-saver";
+
+// Helper to center the crop initially
+function centerAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number,
+) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: "%",
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  );
+}
 
 export const ImageEditor = () => {
   const { currentPhoto, clearPhoto } = usePhotoStore();
   const { addPhoto } = usePhotoStorage();
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [name, setName] = useState("");
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const onCropComplete = (_: Area, croppedAreaPixels: Area) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  };
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Initialize crop when image loads
+  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 3 / 4));
+  }
 
   const handleSave = async () => {
-    if (!currentPhoto || !croppedAreaPixels) return;
+    if (!currentPhoto || !completedCrop || !imgRef.current) return;
 
     setIsProcessing(true);
     try {
+      // We need to scale the completedCrop relative to the natural image size
+      // because the image displayed might be scaled down by CSS (object-contain)
+      const image = imgRef.current;
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+
+      const truePixelCrop = {
+        x: completedCrop.x * scaleX,
+        y: completedCrop.y * scaleY,
+        width: completedCrop.width * scaleX,
+        height: completedCrop.height * scaleY,
+      };
+
       const croppedBlob = await getCroppedImg(
         currentPhoto,
-        croppedAreaPixels,
+        truePixelCrop,
         name,
       );
+
       if (croppedBlob) {
-        // Save to IndexedDB
+        const fileName = `${name || "id_photo"}.jpg`;
+
+        // 1. Save to IndexedDB
         await addPhoto(name || "Untitled", croppedBlob);
 
-        alert("사진이 저장되었습니다!");
-        clearPhoto(); // Return to webcam view
+        // 2. Trigger Download
+        saveAs(croppedBlob, fileName);
+        clearPhoto();
       }
     } catch (e) {
       console.error(e);
@@ -48,64 +96,71 @@ export const ImageEditor = () => {
   if (!currentPhoto) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      <div className="relative flex-1 bg-neutral-900">
-        <Cropper
-          image={currentPhoto}
+    <div className="w-full h-full flex flex-col bg-neutral-900 overflow-hidden relative">
+      {/* Editor Area */}
+      <div className="relative flex-1 bg-neutral-900 flex items-center justify-center overflow-hidden">
+        <ReactCrop
           crop={crop}
-          zoom={zoom}
+          onChange={(_, percentCrop) => setCrop(percentCrop)}
+          onComplete={(c) => setCompletedCrop(c)}
           aspect={3 / 4}
-          onCropChange={setCrop}
-          onCropComplete={onCropComplete}
-          onZoomChange={setZoom}
-          classes={{
-            containerClassName: "bg-neutral-900",
-            cropAreaClassName:
-              "border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.8)]",
-          }}
-        />
+          ruleOfThirds
+          className="max-h-full w-full flex items-center justify-center"
+        >
+          <img
+            ref={imgRef}
+            src={currentPhoto}
+            alt="Crop me"
+            onLoad={onImageLoad}
+            className="max-h-full object-contain"
+          />
+        </ReactCrop>
       </div>
 
-      <div className="bg-neutral-800 p-6 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <label className="text-sm text-gray-400">
-            이름 입력 (사진 우측 하단에 표시)
-          </label>
+      {/* Controls Area (Fixed at bottom) */}
+      <div className="bg-neutral-900 border-t border-neutral-800 p-6 flex items-center gap-4 shrink-0 z-10">
+        <div className="flex-1 max-w-sm flex flex-col gap-1">
+          <label className="text-xs text-gray-400 font-medium">이름</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="예: 홍길동"
-            className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="홍길동"
+            className="w-full bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-neutral-600"
+            onKeyDown={(e) => e.key === "Enter" && handleSave()}
           />
         </div>
 
-        <div className="flex gap-3 mt-2">
+        <div className="h-8 w-px bg-neutral-800 mx-2"></div>
+
+        <div className="flex gap-2">
           <button
             onClick={clearPhoto}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-neutral-700 text-white font-medium hover:bg-neutral-600 transition-colors"
+            className="px-4 py-2.5 rounded-md bg-neutral-800 border border-neutral-700 text-white text-sm font-medium hover:bg-neutral-700 transition-colors"
           >
-            <X className="w-5 h-5" />
-            취소
+            <div className="flex items-center gap-2">
+              <X className="w-4 h-4" />
+              <span>취소</span>
+            </div>
           </button>
           <button
             onClick={handleSave}
             disabled={isProcessing}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-bold transition-colors",
+              "px-6 py-2.5 rounded-md text-sm font-bold transition-colors shadow-lg shadow-blue-900/20",
               isProcessing
-                ? "bg-blue-500/50 cursor-not-allowed"
+                ? "bg-blue-500/50 cursor-not-allowed text-white/50"
                 : "bg-blue-600 hover:bg-blue-500 text-white",
             )}
           >
-            {isProcessing ? (
-              "처리중..."
-            ) : (
-              <>
-                <Check className="w-5 h-5" />
-                완료 및 저장
-              </>
-            )}
+            <div className="flex items-center gap-2">
+              {isProcessing ? (
+                <div className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></div>
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              <span>{isProcessing ? "처리중" : "저장"}</span>
+            </div>
           </button>
         </div>
       </div>
