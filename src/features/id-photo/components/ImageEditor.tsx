@@ -2,12 +2,14 @@ import { useState } from "react";
 import Cropper from "react-easy-crop";
 import { getCroppedImg } from "@/lib/canvas";
 import { usePhotoStore } from "@/store/usePhotoStore";
+import { usePhotoStorage } from "@/features/id-photo/hooks/usePhotoStorage";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Area } from "react-easy-crop";
 
 export const ImageEditor = () => {
-  const { currentPhoto, setPhoto, clearPhoto } = usePhotoStore();
+  const { currentPhoto, clearPhoto } = usePhotoStore();
+  const { addPhoto } = usePhotoStorage();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [name, setName] = useState("");
@@ -29,9 +31,11 @@ export const ImageEditor = () => {
         name,
       );
       if (croppedBlob) {
-        const newUrl = URL.createObjectURL(croppedBlob);
-        setPhoto(newUrl);
-        alert("이미지 처리 완료! (DB 저장은 다음 단계)");
+        // Save to IndexedDB
+        await addPhoto(name || "Untitled", croppedBlob);
+
+        alert("사진이 저장되었습니다!");
+        clearPhoto(); // Return to webcam view
       }
     } catch (e) {
       console.error(e);

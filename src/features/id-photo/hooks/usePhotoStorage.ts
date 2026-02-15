@@ -1,5 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type IDPhoto } from "@/db/db";
+import { db } from "@/db/db";
 
 export const usePhotoStorage = () => {
   // Real-time subscription to the idPhotos table

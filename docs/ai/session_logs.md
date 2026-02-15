@@ -30,3 +30,17 @@ Format: `[Date] [Session Goal] -> [Outcome/Next Steps]`
 - **Outcome:** Successfully built and verified webcam capture and editing flow.
 - **Next Steps:**
   - Proceed to Phase 3: Data Persistence (Dexie.js).
+
+## [2026-02-15] Phase 3 Completion
+
+- **Goal:** Implement persistent storage (IndexedDB) and history view.
+- **Actions:**
+  - **Database:** Defined `PureClientDB` schema in `src/db/db.ts`.
+  - **Hooks:** Created `usePhotoStorage` for live querying and CRUD operations.
+  - **UI Integration:**
+    - Updated `ImageEditor` to save blobs to DB.
+    - Created `PhotoSidebar` to display history and support "Download All" (JSZip).
+    - Updated `App.tsx` layout to include the sidebar.
+- **Outcome:** Photos persist across refreshes and can be downloaded in bulk.
+- **Next Steps:**
+  - Proceed to Phase 4: Feature - ID Card Manager (File Upload & Grid).
