@@ -76,7 +76,8 @@ export const ImageEditor = () => {
       );
 
       if (croppedBlob) {
-        const fileName = `${name || "id_photo"}.jpg`;
+        const numbersOnly = name.replace(/[^0-9]/g, "");
+        const fileName = `${numbersOnly || "id_photo"}.jpg`;
 
         // 1. Save to IndexedDB
         await addPhoto(name || "Untitled", croppedBlob);

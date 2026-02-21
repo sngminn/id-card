@@ -12,9 +12,9 @@ export const PhotoSidebar = () => {
 
     const zip = new JSZip();
     photos.forEach((photo, index) => {
-      // Create filename using just the photo name
-      // To prevent overwrite in zip, user should be aware, but requirement is exact name
-      const filename = `${photo.name || `photo_${index + 1}`}.jpg`;
+      // Extract only numbers from the photo name
+      const numbersOnly = photo.name?.replace(/[^0-9]/g, "");
+      const filename = `${numbersOnly || `photo_${index + 1}`}.jpg`;
       zip.file(filename, photo.blob);
     });
 
@@ -62,7 +62,12 @@ export const PhotoSidebar = () => {
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <button
-                  onClick={() => saveAs(photo.blob, `${photo.name}.jpg`)}
+                  onClick={() =>
+                    saveAs(
+                      photo.blob,
+                      `${photo.name?.replace(/[^0-9]/g, "") || "photo"}.jpg`,
+                    )
+                  }
                   className="p-2 bg-white text-black rounded-full hover:bg-gray-200"
                   title="다운로드"
                 >
