@@ -102,7 +102,7 @@ export const IDCardManager = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      card.id && deleteCard(card.id);
+                      if (card.id) deleteCard(card.id);
                     }}
                     className="p-2.5 bg-red-500/80 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg transform hover:scale-105 active:scale-95"
                     title="삭제"

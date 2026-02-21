@@ -72,7 +72,7 @@ export const ImageEditor = () => {
       const croppedBlob = await getCroppedImg(
         currentPhoto,
         truePixelCrop,
-        name,
+        name.replace(/[^a-zA-Z가-힣\s]/g, ""),
       );
 
       if (croppedBlob) {

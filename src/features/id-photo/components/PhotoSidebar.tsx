@@ -11,9 +11,10 @@ export const PhotoSidebar = () => {
     if (!photos || photos.length === 0) return;
 
     const zip = new JSZip();
-    photos.forEach((photo) => {
-      // Create a unique filename: name_id.jpg
-      const filename = `${photo.name || "photo"}_${photo.id}.jpg`;
+    photos.forEach((photo, index) => {
+      // Create filename using just the photo name
+      // To prevent overwrite in zip, user should be aware, but requirement is exact name
+      const filename = `${photo.name || `photo_${index + 1}`}.jpg`;
       zip.file(filename, photo.blob);
     });
 

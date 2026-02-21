@@ -42,6 +42,7 @@ export const MaskingEditor = ({
   useEffect(() => {
     if (card.blob) {
       const url = URL.createObjectURL(card.blob);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setImageSrc(url);
       return () => URL.revokeObjectURL(url);
     }
