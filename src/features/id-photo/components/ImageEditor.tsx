@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import ReactCrop, {
   type Crop,
   type PixelCrop,
+  type PercentCrop,
   centerCrop,
   makeAspectCrop,
 } from "react-image-crop";
@@ -9,6 +10,7 @@ import "react-image-crop/dist/ReactCrop.css";
 import { getCroppedImg } from "@/lib/canvas";
 import { usePhotoStore } from "@/store/usePhotoStore";
 import { usePhotoStorage } from "@/features/id-photo/hooks/usePhotoStorage";
+import { useCropStore } from "@/store/useCropStore";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveAs } from "file-saver";
@@ -37,6 +39,7 @@ function centerAspectCrop(
 export const ImageEditor = () => {
   const { currentPhoto, clearPhoto } = usePhotoStore();
   const { addPhoto } = usePhotoStorage();
+  const { defaultCrop, setDefaultCrop } = useCropStore();
 
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
@@ -48,7 +51,11 @@ export const ImageEditor = () => {
   // Initialize crop when image loads
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
-    setCrop(centerAspectCrop(width, height, 3 / 4));
+    if (defaultCrop) {
+      setCrop(defaultCrop);
+    } else {
+      setCrop(centerAspectCrop(width, height, 3 / 4));
+    }
   }
 
   const handleSave = async () => {
@@ -131,6 +138,21 @@ export const ImageEditor = () => {
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
           />
         </div>
+
+        <div className="h-8 w-px bg-neutral-800 mx-2"></div>
+
+        <button
+          onClick={() => {
+            if (crop?.unit === "%") {
+              setDefaultCrop(crop as PercentCrop);
+              alert("현재 비율이 사진 촬영 가이드 라인으로 설정되었습니다.");
+            }
+          }}
+          className="px-3 py-2 text-xs font-bold bg-neutral-800 hover:bg-neutral-700 text-white rounded-md border border-neutral-700 shrink-0 transition-colors"
+          title="현재 비율을 카메라 뷰파인더 가이드로 설정합니다."
+        >
+          가이드로 지정
+        </button>
 
         <div className="h-8 w-px bg-neutral-800 mx-2"></div>
 

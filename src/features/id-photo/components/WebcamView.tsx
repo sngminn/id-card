@@ -2,6 +2,7 @@ import { useRef, useState, useCallback } from "react";
 import Webcam from "react-webcam";
 import { Camera, AlertCircle } from "lucide-react";
 import { usePhotoStore } from "@/store/usePhotoStore";
+import { useCropStore } from "@/store/useCropStore";
 
 const videoConstraints = {
   width: { min: 1280, ideal: 1920, max: 3840 },
@@ -12,8 +13,13 @@ const videoConstraints = {
 export const WebcamView = () => {
   const webcamRef = useRef<Webcam>(null);
   const { setPhoto } = usePhotoStore();
+  const { defaultCrop } = useCropStore();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [videoDimensions, setVideoDimensions] = useState({
+    width: 16,
+    height: 9,
+  });
 
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current?.getScreenshot();
@@ -22,9 +28,23 @@ export const WebcamView = () => {
     }
   }, [webcamRef, setPhoto]);
 
-  const handleUserMedia = () => {
+  const handleUserMedia = (stream: any) => {
     setLoading(false);
     setError(null);
+    try {
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        const settings = track.getSettings();
+        if (settings.width && settings.height) {
+          setVideoDimensions({
+            width: settings.width,
+            height: settings.height,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to get track settings:", e);
+    }
   };
 
   const handleUserMediaError = (err: string | DOMException) => {
@@ -36,7 +56,7 @@ export const WebcamView = () => {
   };
 
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden rounded-xl">
+    <div className="relative w-full h-full bg-black flex flex-col items-center justify-center p-4 sm:p-6 overflow-hidden rounded-xl">
       {loading && !error && (
         <div className="absolute inset-0 z-10 w-full h-full bg-neutral-800 animate-pulse flex flex-col items-center justify-center">
           <div className="w-16 h-16 bg-neutral-700 rounded-full mb-4"></div>
@@ -50,7 +70,13 @@ export const WebcamView = () => {
           <p>{error}</p>
         </div>
       ) : (
-        <>
+        <div
+          className="relative w-full max-h-full flex items-center justify-center rounded-xl overflow-hidden shadow-2xl bg-neutral-900 border border-neutral-800 transition-all duration-300 shrink-0"
+          style={{
+            aspectRatio: `${videoDimensions.width} / ${videoDimensions.height}`,
+            maxWidth: "100%",
+          }}
+        >
           <Webcam
             audio={false}
             ref={webcamRef}
@@ -65,24 +91,43 @@ export const WebcamView = () => {
             mirrored={true}
           />
 
-          {/* Guide Overlay (3:4 Aspect Ratio Visual Guide) - Optional, mainly for centering */}
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="aspect-[3/4] h-[80%] border-2 border-dashed border-white/30 rounded-lg opacity-50 relative">
-              <div className="absolute top-[10%] left-[15%] right-[15%] bottom-[20%] border-2 border-dashed border-white/30 rounded-full"></div>
+          {/* Guide Overlay */}
+          {defaultCrop ? (
+            <div
+              className="absolute pointer-events-none z-10 border-[3px] border-green-500/80 rounded shadow-sm bg-green-500/10 box-border"
+              style={{
+                left: `${defaultCrop.x}%`,
+                top: `${defaultCrop.y}%`,
+                width: `${defaultCrop.width}%`,
+                height: `${defaultCrop.height}%`,
+              }}
+            >
+              <div
+                className="absolute -top-[28px] left-[-3px] bg-green-500 text-white font-bold text-xs px-2 py-1 rounded-t shadow-md pointer-events-auto cursor-help"
+                title="ImageEditor에서 지정한 기본 크롭 영역입니다."
+              >
+                지정된 가이드 영역
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+              <div className="aspect-[3/4] h-[80%] border-2 border-dashed border-white/40 rounded-lg opacity-50 relative bg-white/5 shadow-inner">
+                <div className="absolute top-[10%] left-[15%] right-[15%] bottom-[20%] border-2 border-dashed border-white/30 rounded-full"></div>
+              </div>
+            </div>
+          )}
 
-          <div className="absolute bottom-8 left-0 right-0 z-20 flex justify-center">
+          <div className="absolute bottom-6 left-0 right-0 z-20 flex justify-center pointer-events-auto">
             <button
               onClick={capture}
-              className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all shadow-xl hover:scale-105 active:scale-95"
+              className="flex items-center gap-2 px-8 py-4 bg-white/90 text-black backdrop-blur-md rounded-full font-bold hover:bg-white transition-all shadow-xl hover:scale-105 active:scale-95 border border-neutral-200"
               aria-label="사진 촬영"
             >
               <Camera className="w-6 h-6" />
               촬영하기
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
