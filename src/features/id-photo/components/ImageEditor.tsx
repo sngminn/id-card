@@ -112,7 +112,6 @@ export const ImageEditor = () => {
           onChange={(_, percentCrop) => setCrop(percentCrop)}
           onComplete={(c) => setCompletedCrop(c)}
           aspect={3 / 4}
-          ruleOfThirds
           className="max-h-full w-full flex items-center justify-center"
         >
           <img
