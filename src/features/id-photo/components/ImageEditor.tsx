@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import ReactCrop, {
   type Crop,
   type PixelCrop,
+  type PercentCrop,
   centerCrop,
   makeAspectCrop,
 } from "react-image-crop";
@@ -12,6 +13,39 @@ import { usePhotoStorage } from "@/features/id-photo/hooks/usePhotoStorage";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveAs } from "file-saver";
+
+const CROP_STORAGE_KEY = "id-photo-maker-last-crop";
+
+function getInitialCrop(width: number, height: number): PercentCrop {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CROP_STORAGE_KEY) || "null");
+    if (
+      saved?.unit === "%" &&
+      [saved.x, saved.y, saved.width, saved.height].every(
+        (value) => typeof value === "number" && Number.isFinite(value),
+      ) &&
+      saved.x >= 0 && saved.y >= 0 &&
+      saved.width > 0 && saved.height > 0 &&
+      saved.x + saved.width <= 100 &&
+      saved.y + saved.height <= 100
+    ) {
+      const restored = makeAspectCrop(
+        { unit: "%", width: saved.width },
+        3 / 4,
+        width,
+        height,
+      );
+      return {
+        ...restored,
+        x: Math.min(saved.x, 100 - restored.width),
+        y: Math.min(saved.y, 100 - restored.height),
+      };
+    }
+  } catch {
+    // Use the default when storage is unavailable or invalid.
+  }
+  return centerAspectCrop(width, height, 3 / 4);
+}
 
 // Helper to center the crop initially
 function centerAspectCrop(
@@ -48,7 +82,15 @@ export const ImageEditor = () => {
   // Initialize crop when image loads
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
-    setCrop(centerAspectCrop(width, height, 3 / 4));
+    const initialCrop = getInitialCrop(width, height);
+    setCrop(initialCrop);
+    setCompletedCrop({
+      unit: "px",
+      x: (initialCrop.x / 100) * width,
+      y: (initialCrop.y / 100) * height,
+      width: (initialCrop.width / 100) * width,
+      height: (initialCrop.height / 100) * height,
+    });
   }
 
   const handleSave = async () => {
@@ -102,7 +144,15 @@ export const ImageEditor = () => {
         <ReactCrop
           crop={crop}
           onChange={(_, percentCrop) => setCrop(percentCrop)}
-          onComplete={(c) => setCompletedCrop(c)}
+          onComplete={(pixelCrop, percentCrop) => {
+            setCompletedCrop(pixelCrop);
+            if (percentCrop.width <= 0 || percentCrop.height <= 0) return;
+            try {
+              localStorage.setItem(CROP_STORAGE_KEY, JSON.stringify(percentCrop));
+            } catch {
+              // Cropping still works when browser storage is unavailable.
+            }
+          }}
           aspect={3 / 4}
           className="max-h-full w-full flex items-center justify-center"
         >
