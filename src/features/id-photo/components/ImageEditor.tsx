@@ -96,6 +96,13 @@ export const ImageEditor = () => {
   const handleSave = async () => {
     if (!currentPhoto || !completedCrop || !imgRef.current) return;
 
+    const photoName = name.replace(/[^\p{L}\p{M}\s]/gu, "").trim();
+    const photoIndex = name.replace(/[^0-9]/g, "");
+    if (!photoIndex) {
+      alert("파일명으로 사용할 숫자(인덱스)를 입력해주세요.");
+      return;
+    }
+
     setIsProcessing(true);
     try {
       // We need to scale the completedCrop relative to the natural image size
@@ -114,11 +121,11 @@ export const ImageEditor = () => {
       const croppedBlob = await getCroppedImg(
         currentPhoto,
         truePixelCrop,
-        name,
+        photoName,
       );
 
       if (croppedBlob) {
-        const fileName = `${name || "id_photo"}.jpg`;
+        const fileName = `${photoIndex}.jpg`;
 
         // 1. Save to IndexedDB
         await addPhoto(name || "Untitled", croppedBlob);
@@ -169,12 +176,12 @@ export const ImageEditor = () => {
       {/* Controls Area (Fixed at bottom) */}
       <div className="bg-neutral-900 border-t border-neutral-800 p-6 flex items-center gap-4 shrink-0 z-10">
         <div className="flex-1 max-w-sm flex flex-col gap-1">
-          <label className="text-xs text-gray-400 font-medium">이름</label>
+          <label className="text-xs text-gray-400 font-medium">이름 및 번호</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="홍길동"
+            placeholder="001 홍길동"
             className="w-full bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-neutral-600"
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
           />
